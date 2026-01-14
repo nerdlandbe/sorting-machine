@@ -1,18 +1,14 @@
 // based on https://www.instructables.com/Arduino-MM-Color-Sorter/
-// alternative: https://github.com/MxBoud/Arduino-Skittles-Sorter
-
-// receipients: https://www.ikea.com/be/nl/p/ikea-365-schaal-afgeronde-rand-wit-80282996/
 
 #include <Arduino.h>
 
-// Uncomment to initialize color settings for your setup
-// Insert one of these m&m's in this order: red, yellow, orange, green, blue, brown
-// #define doColorSetup true
+// Uncomment to initialize color settings for your setup. Insert one of these m&m's in this order to set color values: red, yellow, orange, green, blue, brown
+//#define doColorSetup true
 
-// Uncomment to do servo testing only
-// #define doServoTest true
+// Uncomment to do servo position testing only
+//#define doServoTest true
 
-// servo positions for second stage sorting compartments
+// servo positions for second stage sorting compartment
 // change accrodingly to your setup
 const int servoPositions[3] = {20, 55, 163};
 
@@ -24,8 +20,9 @@ const int limitPin = 8;
 const int servoPin = 3;
 
 const int lightSensorPin = A0;
-const int lightThreshold = 10;
-const int sampleCount = 10;
+const int lightThreshold = 8;
+const int sampleCount = 50;  // number of samples to take for each color reading
+const int stabilizationDelay = 300;  // Time for LED to stabilize before reading
 
 struct ColorReference {
     const String name;
@@ -38,12 +35,12 @@ struct ColorReference {
 const int colorCount = 6;
 
 ColorReference colors[colorCount] = {
-    {"red", 10, 6, 5, 0},
-    {"yellow", 11, 8, 5, 0},
-    {"orange", 11, 6, 5, 0},
-    {"green", 6, 8, 5, 0},
-    {"blue", 5, 6, 6, 0},
-    {"brown", 6, 5, 4, 0}};
+    {"red", 12, 5, 5, 0},
+    {"yellow", 13, 10, 5, 0},
+    {"orange", 12, 7, 4, 0},
+    {"green", 7, 9, 5, 0},
+    {"blue", 6, 6, 6, 0},
+    {"brown", 7, 5, 4, 0}};
 
 ColorReference testColor = {"test", 0, 0, 0, 0};
 
@@ -95,7 +92,8 @@ void moveToLimit() {
     while (digitalRead(limitPin) == HIGH) {
         myStepper.step(10);
         if (i > 200) {
-            myStepper.step(-100);
+            Serial.println("Jammed, Reversing");
+            myStepper.step(-300);
             i = 0;
         }
         i++;
@@ -111,7 +109,7 @@ void moveToLimit() {
 void getColorValues() {
     // check if chamber is not empty
     digitalWrite(whitePin, HIGH);
-    delay(50);
+    delay(100);  // Increased delay for white LED stabilization
     int check = analogRead(lightSensorPin);
     digitalWrite(whitePin, LOW);
 
@@ -129,43 +127,146 @@ void getColorValues() {
     }
 
     delay(100);
+    emptyChamberCount = 0;
 
     Serial.println("Testing Color...");
 
-    // collects photoresistor value from red, green and blue light
-    // and stores average values in test array
+    // Measure ambient light level (LED off)
+    setLED(0, 0, 0);
+    delay(50);
+    int ambient = 0;
+    for (int i = 0; i < 10; i++) {
+        ambient += analogRead(lightSensorPin);
+        delay(5);
+    }
+    ambient = ambient / 10;
+    Serial.print("Ambient light: ");
+    Serial.println(ambient);
+
+    // Collect RED light reflection
     setLED(255, 0, 0);
-    int sum = 0;
-    delay(200);
+    delay(stabilizationDelay);
+    int readings[sampleCount];
+    
     for (int i = 0; i < sampleCount; i++) {
-        int red = analogRead(lightSensorPin);
-        sum = sum + red;
+        readings[i] = analogRead(lightSensorPin);
+        delay(10);  // Small delay between readings
     }
-    testColor.red = sum / sampleCount;
-    Serial.print("Red value: ");
-    Serial.println(int(testColor.red));
+    
+    // Sort and take median to filter outliers
+    for (int i = 0; i < sampleCount - 1; i++) {
+        for (int j = 0; j < sampleCount - i - 1; j++) {
+            if (readings[j] > readings[j + 1]) {
+                int temp = readings[j];
+                readings[j] = readings[j + 1];
+                readings[j + 1] = temp;
+            }
+        }
+    }
+    
+    // Average the middle 70% of readings (discard outliers)
+    int startIdx = sampleCount * 0.15;
+    int endIdx = sampleCount * 0.85;
+    long sum = 0;
+    for (int i = startIdx; i < endIdx; i++) {
+        sum += readings[i];
+    }
+    testColor.red = sum / (endIdx - startIdx);
+    
+    Serial.print("Red - Min: ");
+    Serial.print(readings[0]);
+    Serial.print(" | Max: ");
+    Serial.print(readings[sampleCount - 1]);
+    Serial.print(" | Avg: ");
+    Serial.print(testColor.red);
+    Serial.print(" | Corrected: ");
+    int correctedRed = testColor.red - ambient;
+    Serial.println(correctedRed > 0 ? correctedRed : 0);
 
+    // Collect GREEN light reflection
     setLED(0, 255, 0);
-    sum = 0;
-    delay(200);
+    delay(stabilizationDelay);
+    
     for (int i = 0; i < sampleCount; i++) {
-        int red = analogRead(lightSensorPin);
-        sum = sum + red;
+        readings[i] = analogRead(lightSensorPin);
+        delay(10);
     }
-    testColor.green = sum / sampleCount;
-    Serial.print("Green value: ");
-    Serial.println(int(testColor.green));
+    
+    // Sort for median filtering
+    for (int i = 0; i < sampleCount - 1; i++) {
+        for (int j = 0; j < sampleCount - i - 1; j++) {
+            if (readings[j] > readings[j + 1]) {
+                int temp = readings[j];
+                readings[j] = readings[j + 1];
+                readings[j + 1] = temp;
+            }
+        }
+    }
+    
+    sum = 0;
+    for (int i = startIdx; i < endIdx; i++) {
+        sum += readings[i];
+    }
+    testColor.green = sum / (endIdx - startIdx);
+    
+    Serial.print("Green - Min: ");
+    Serial.print(readings[0]);
+    Serial.print(" | Max: ");
+    Serial.print(readings[sampleCount - 1]);
+    Serial.print(" | Avg: ");
+    Serial.print(testColor.green);
+    Serial.print(" | Corrected: ");
+    int correctedGreen = testColor.green - ambient;
+    Serial.println(correctedGreen > 0 ? correctedGreen : 0);
 
+    // Collect BLUE light reflection
     setLED(0, 0, 255);
-    sum = 0;
-    delay(200);
+    delay(stabilizationDelay);
+    
     for (int i = 0; i < sampleCount; i++) {
-        int red = analogRead(lightSensorPin);
-        sum = sum + red;
+        readings[i] = analogRead(lightSensorPin);
+        delay(10);
     }
-    testColor.blue = sum / sampleCount;
-    Serial.print("Blue value: ");
-    Serial.println(int(testColor.blue));
+    
+    // Sort for median filtering
+    for (int i = 0; i < sampleCount - 1; i++) {
+        for (int j = 0; j < sampleCount - i - 1; j++) {
+            if (readings[j] > readings[j + 1]) {
+                int temp = readings[j];
+                readings[j] = readings[j + 1];
+                readings[j + 1] = temp;
+            }
+        }
+    }
+    
+    sum = 0;
+    for (int i = startIdx; i < endIdx; i++) {
+        sum += readings[i];
+    }
+    testColor.blue = sum / (endIdx - startIdx);
+    
+    Serial.print("Blue - Min: ");
+    Serial.print(readings[0]);
+    Serial.print(" | Max: ");
+    Serial.print(readings[sampleCount - 1]);
+    Serial.print(" | Avg: ");
+    Serial.print(testColor.blue);
+    Serial.print(" | Corrected: ");
+    int correctedBlue = testColor.blue - ambient;
+    Serial.println(correctedBlue > 0 ? correctedBlue : 0);
+
+    // Print ratio information for color discrimination
+    Serial.println("--- Color Ratios ---");
+    if (testColor.green > 0) {
+        Serial.print("R/G ratio: ");
+        Serial.println((float)testColor.red / testColor.green);
+    }
+    if (testColor.blue > 0) {
+        Serial.print("R/B ratio: ");
+        Serial.println((float)testColor.red / testColor.blue);
+        Serial.print("G/B ratio: ");
+        Serial.println((float)testColor.green / testColor.blue);
+    }
 
     // turn LED off and update overall m&m counter
     setLED(0, 0, 0);
@@ -195,17 +296,19 @@ int findMatch() {
 
     if (closest == sums[0]) {
         matchedColorId = 0;
+    } else if (closest == sums[1]) {
+        matchedColorId = 1;
     } else if (closest == sums[2]) {
         matchedColorId = 2;
     } else if (closest == sums[3]) {
         matchedColorId = 3;
     } else if (closest == sums[4]) {
         matchedColorId = 4;
-    } else if (closest == sums[5]) {
-        matchedColorId = 5;
     } else {
-        matchedColorId = 6;
+        matchedColorId = 5;
     }
+
+    colors[matchedColorId].count++;
 
     Serial.print("Matched Color: ");
     Serial.println(colors[matchedColorId].name);
@@ -224,33 +327,34 @@ void sort(int colorId) {
 
     switch (colorId) {
         case 0:
+            myServo.write(servoPositions[2]);
+            myStepper.step(-1650);
             moveToLimit();
             break;
         case 1:
-            myServo.write(servoPositions[2]);
+            myServo.write(servoPositions[1]);
             myStepper.step(-1650);
             moveToLimit();
             break;
         case 2:
-            myServo.write(servoPositions[1]);
+            myServo.write(servoPositions[0]);
             myStepper.step(-1650);
             moveToLimit();
             break;
         case 3:
-            myServo.write(servoPositions[0]);
-            myStepper.step(-1650);
-            moveToLimit();
-            break;
-        case 4:
             myServo.write(servoPositions[2]);
             moveToLimit();
             break;
-        case 5:
+        case 4:
             myServo.write(servoPositions[1]);
             moveToLimit();
             break;
-        case 6:
+        case 5:
             myServo.write(servoPositions[0]);
+            moveToLimit();
+            break;
+        default:
+            Serial.println("No valid color selected for sorting");
             moveToLimit();
             break;
     }
@@ -272,6 +376,7 @@ void showStats() {
     }
 
     // ends program
+    delay(400);
     exit(0);
 }
 
@@ -318,7 +423,7 @@ void setup() {
 
     pinMode(lightSensorPin, INPUT);
 
-    // Stepper motor, Servo motor, and serial port
+    // Stepper motor, Servo motor setup
     myStepper.setSpeed(15);
     myServo.attach(servoPin);
     myServo.write(servoPositions[1]);
@@ -344,6 +449,7 @@ void loop() {
 #ifdef doServoTest
     servoTest();
 #else
+
     getColorValues();
     sort(findMatch());
 
