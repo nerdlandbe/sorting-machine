@@ -161,6 +161,37 @@ Het bovenste deel is nu compleet!
 ![Bovenste deel 01](doc/bovenste-compleet-01.jpg)
 ![Bovenste deel 02](doc/bovenste-compleet-02.jpg)
 
+## Servocalibratie
+
+Het kan zijn dat je de onderste sorteerschijf anders gemonteerd hebt.
+
+De onderste schijf moet op drie posities komen te staan. Om dit te testen, zoek deze lijn code en wis de twee ``//`` voor ``#define``
+
+```
+// Uncomment to do servo position testing only
+//#define doServoTest true
+```
+
+Upload de code nu en de machine zal heel de tijd deze drie posities aflopen.
+
+**Let wel op!** De machine is nog niet compleet. Hou  hem vast of zet hem ondersteboven zodat hij niet omvalt of kapot gaat. 
+
+Kijk visueel of de posities overenkomen met de posities op de foto's hieronder.
+
+![servo posities](doc/servo-posities.jpg)
+
+Als dit niet zo is, heb je twee mogelijkheden: ofwel vijs je een stuk terug open, ofwel pas je de drie waardes aan in dit stuk van de code:
+
+```
+// servo positions for second stage sorting compartment
+// change accrodingly to your setup
+const int servoPositions[3] = {20, 55, 163};
+```
+
+Het is een beetje trial-and-error: waardes aanpassen, code uploaden, kijken wat het resultaat is, terug aanpassen en uploaden ...
+
+Als de drie posities correct zijn, zet dan de twee ``//`` voor ``#define`` terug en upload de code nog een keer.
+
 ## Montage onderste gedeelte
 
 Voor het onderste deel heb je de vier M3 bouten nodig, de drie M4 X 40 bouten, drie 14mm washers en drie 10mm washers.
@@ -198,3 +229,31 @@ Nog de zes bakjes erbij, je zal zien dat deze mooi over het randje aan de onderk
 ## Klaar
 
 ![KLaar](doc/afwerking-04.jpg)
+
+
+# Kleurcalibratie
+
+Als de kleuren niet correct zijn, kan het zijn dat de lichtsensor of de RGB-led andere eigenschappen heeft. Dan moet je de kleurwaardes aanpassen, maar in de code zit een kalibratiefunctie ingebouwd. 
+
+Zoek deze lijn code en wis de twee ``//`` voor ``#define``
+
+```
+// Uncomment to initialize color settings for your setup. Insert one of these m&m's in this order to set color values: red, yellow, orange, green, blue, brown
+//#define doColorSetup true
+```
+
+Laad de code op en geef iedere keer een M&M van de juiste kleur.
+
+Noteer de waardes die je ziet in de seriële monitor op je laptop. Deze waardes moet je hier in de code aanpassen:
+
+```
+ColorReference colors[colorCount] = {
+    {"red", 12, 5, 5, 0},
+    {"yellow", 13, 10, 5, 0},
+    {"orange", 12, 7, 4, 0},
+    {"green", 7, 9, 5, 0},
+    {"blue", 6, 6, 6, 0},
+    {"brown", 7, 5, 4, 0}};
+```
+
+Zet daarna terug twee ``//`` voor ``#define`` en upload de nieuwe code. De kleurwaardes zijn nu gecalibreerd.
