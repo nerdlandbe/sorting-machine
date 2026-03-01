@@ -2,7 +2,7 @@
 
 Deze sorteermachine is met 3D-geprinte onderdelen en een aantal elektronica componenten te maken.
 
-Het bovenste gedeelte is gebaseerd op [deze sorteermachine](https://www.instructables.com/Arduino-MM-Color-Sorter/). Het onderste gedeelte is bijgemaakt en de codeis helemaal herschreven.
+Het bovenste gedeelte is gebaseerd op [deze sorteermachine](https://www.instructables.com/Arduino-MM-Color-Sorter/). Het onderste gedeelte is bijgemaakt en de code is helemaal herschreven.
 
 Met deze verbetering zie je alles nog beter en is de code ook duidelijker.
 
@@ -32,12 +32,13 @@ Met deze verbetering zie je alles nog beter en is de code ook duidelijker.
 - [washer-10mm.stl](3D-files/washer-10mm.stl) (3 keer)
 - [washer-14mm.stl](3D-files/washer-14mm.stl) (6 keer)
 
-je kan de kleur van alle onderdelen kiezen zoals je zelf wil, alleen [sensor_housing.stl](3D-files/sensor_housing.stl) en  [central_compartment.stl](3D-files/central_compartment.stl) moeten in het zwart om de kleurselectie te laten werken.
+Je kan de kleur van alle onderdelen kiezen zoals je zelf wil, alleen [sensor_housing.stl](3D-files/sensor_housing.stl) en  [central_compartment.stl](3D-files/central_compartment.stl) moeten in het zwart om de kleurselectie te laten werken.
 
 ### Electronica componenten
 
-- Arduino uno of Nano
-- Breadboard of Nano expansion board
+- Arduino uno of nano
+- Breadboard of nano expansion board
+- LDR (lichtsensor)
 - RGB led 5mm
 - Witte led 5mm
 - Weerstand 220 ohm (4 keer)
@@ -134,13 +135,13 @@ Gebruik twee M2.5 X 20 bouten en moeren.
 
 De microswitch geeft een signaal wanneer de bovenste sorteerder een M&M in de controlekamer heeft gelegd.
 
-Deze stap heeft wat extra mechanische configuratie nodig. De microswitch moet namelijk ingedrukt zijn (je hoort een klikje) als de verdikking van de zwarte schuif met gat voorbij de microswitch passeert.
+Deze stap heeft wat extra mechanische configuratie nodig. De microswitch moet namelijk ingedrukt zijn (je hoort een klikje) als de verdikking van de zwarte schijf met gat voorbij de microswitch passeert.
 
 De twee vijsjes moeten mogelijks een beetje in de gleuven van het witte onderdeel naar voor of achter geschoven worden.
 
 Let ook op de orientatie van de microswitch. De kleuren van de draadjes op de foto kan je gebruiken om de open beugel van de microswitch in de juiste richting te monteren.
 
-Als je de schuif een paar keer hebt kunnen ronddraaien en iedere keer een klik gehoord hebt én de schijf vlotjes is kunnen verder draaien, draai dan de vijsjes en de bouten goed vast aan.
+Als je de schijf een paar keer hebt kunnen ronddraaien en iedere keer een klik gehoord hebt én de schijf vlotjes is kunnen verder draaien, draai dan de vijsjes en de bouten goed vast aan.
 
 ![Microswitch nontage](doc/microswitch-montage-01.jpg)
 ![Microswitch nontage](doc/microswitch-montage-02.jpg)
